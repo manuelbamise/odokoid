@@ -6,6 +6,7 @@ import {
   useSensor,
   useSensors,
   PointerSensor,
+  closestCenter,
   type DragStartEvent,
   type DragEndEvent,
 } from '@dnd-kit/core'
@@ -83,7 +84,18 @@ function FormBuilderPage() {
     
     if (isFromPalette && fieldType) {
       const newField = createField(fieldType)
-      setFields((prev) => [...prev, newField])
+      const overId = over.id.toString()
+      
+      if (overId === 'canvas' || !fields.some(f => f.id === overId)) {
+        setFields((prev) => [...prev, newField])
+      } else {
+        const overIndex = fields.findIndex((f) => f.id === overId)
+        setFields((prev) => {
+          const newFields = [...prev]
+          newFields.splice(overIndex, 0, newField)
+          return newFields
+        })
+      }
       setSelectedFieldId(newField.id)
     } else if (active.id !== over.id) {
       setFields((items) => {
@@ -129,6 +141,7 @@ function FormBuilderPage() {
   return (
     <DndContext
       sensors={sensors}
+      collisionDetection={closestCenter}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >

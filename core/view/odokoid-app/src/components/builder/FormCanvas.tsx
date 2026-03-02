@@ -105,7 +105,12 @@ export function FormCanvas({
   })
 
   return (
-    <div ref={setNodeRef} className="flex-1 overflow-y-auto p-6">
+    <div
+      ref={setNodeRef}
+      className={`flex-1 overflow-y-auto p-6 transition-colors ${
+        isOver ? 'bg-primary/5' : ''
+      }`}
+    >
       <div className="max-w-2xl mx-auto">
         {fields.length === 0 ? (
           <div
