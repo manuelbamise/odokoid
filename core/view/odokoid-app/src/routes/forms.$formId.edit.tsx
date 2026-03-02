@@ -176,7 +176,7 @@ function FormBuilderPage() {
           </aside>
 
           <div className="flex-1 overflow-hidden">
-            <div className="h-full overflow-y-auto p-6">
+            <div className="overflow-y-auto p-6">
               <div className="max-w-2xl mx-auto">
                 <div className="mb-6">
                   <input
