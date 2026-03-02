@@ -40,6 +40,10 @@ function RootLayout() {
     () => matchRoute({ to: '/forms/$formId/edit' }),
     [matchRoute]
   )
+  const isPublicFormRoute = useMemo(
+    () => matchRoute({ to: '/f/$formId' }),
+    [matchRoute]
+  )
   const [sidebarOpen, setSidebarOpen] = useState(!isBuilderRoute)
 
   return (
@@ -51,7 +55,7 @@ function RootLayout() {
       <body className="font-sans antialiased [overflow-wrap:anywhere] selection:bg-[rgba(79,184,178,0.24)]">
         <FormStoreProvider>
           <div className="flex h-screen">
-            {!isBuilderRoute && (
+            {!isBuilderRoute && !isPublicFormRoute && (
               <aside
                 className={`${sidebarOpen ? 'w-64' : 'w-16'} border-r bg-card transition-all duration-200 flex flex-col`}
               >
@@ -94,7 +98,7 @@ function RootLayout() {
               </aside>
             )}
 
-            <main className={`flex-1 overflow-auto bg-background ${isBuilderRoute ? 'h-screen' : ''}`}>
+            <main className={`flex-1 overflow-auto bg-background ${isBuilderRoute || isPublicFormRoute ? 'h-screen' : ''}`}>
               <Outlet />
             </main>
           </div>
