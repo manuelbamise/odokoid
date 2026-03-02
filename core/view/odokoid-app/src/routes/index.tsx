@@ -19,50 +19,12 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useFormStore } from '@/lib/forms-store'
 import type { Form } from '@/types/form'
 
 export const Route = createFileRoute('/')({
   component: Dashboard,
 })
-
-const mockForms: Form[] = [
-  {
-    id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-    title: 'Customer Feedback Form',
-    description: 'Collect feedback from your customers',
-    fields: [
-      { id: 'f1', type: 'text', label: 'Name', required: true },
-      { id: 'f2', type: 'email', label: 'Email', required: true },
-      { id: 'f3', type: 'multiselect', label: 'Rating', options: ['1', '2', '3', '4', '5'], required: false },
-    ],
-    createdAt: '2026-02-15T10:30:00Z',
-    updatedAt: '2026-02-20T14:45:00Z',
-  },
-  {
-    id: 'b2c3d4e5-f6a7-8901-bcde-f12345678901',
-    title: 'Event Registration',
-    description: 'Register for upcoming events',
-    fields: [
-      { id: 'f1', type: 'text', label: 'Full Name', required: true },
-      { id: 'f2', type: 'email', label: 'Email', required: true },
-      { id: 'f3', type: 'date', label: 'Preferred Date', required: true },
-    ],
-    createdAt: '2026-02-10T09:00:00Z',
-    updatedAt: '2026-02-10T09:00:00Z',
-  },
-  {
-    id: 'c3d4e5f6-a7b8-9012-cdef-123456789012',
-    title: 'Job Application',
-    description: 'Apply for open positions',
-    fields: [
-      { id: 'f1', type: 'text', label: 'Position', required: true },
-      { id: 'f2', type: 'text', label: 'Years of Experience', required: false },
-      { id: 'f3', type: 'select', label: 'Availability', options: ['Full-time', 'Part-time', 'Contract'], required: true },
-    ],
-    createdAt: '2026-01-28T16:20:00Z',
-    updatedAt: '2026-02-01T11:30:00Z',
-  },
-]
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString)
@@ -159,7 +121,7 @@ function FormCard({
 
 function Dashboard() {
   const navigate = useNavigate()
-  const [forms, setForms] = useState<Form[]>(mockForms)
+  const { forms, addForm, deleteForm } = useFormStore()
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [newFormTitle, setNewFormTitle] = useState('')
   const [newFormDescription, setNewFormDescription] = useState('')
@@ -176,7 +138,7 @@ function Dashboard() {
       updatedAt: new Date().toISOString(),
     }
 
-    setForms((prev) => [newForm, ...prev])
+    addForm(newForm)
     setIsCreateDialogOpen(false)
     setNewFormTitle('')
     setNewFormDescription('')
@@ -193,7 +155,7 @@ function Dashboard() {
   }
 
   const handleDelete = (id: string) => {
-    setForms((prev) => prev.filter((form) => form.id !== id))
+    deleteForm(id)
   }
 
   return (
