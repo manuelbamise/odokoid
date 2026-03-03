@@ -10,6 +10,7 @@ import (
 	"github.com/pressly/goose/v3"
 	"odokoid-api/internal/config"
 	"odokoid-api/internal/db"
+	"odokoid-api/internal/handler"
 )
 
 func main() {
@@ -55,6 +56,21 @@ func main() {
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
+
+	h := handler.New(database)
+
+	api := router.Group("/api")
+	{
+		api.POST("/forms", h.CreateForm)
+		api.GET("/forms", h.ListForms)
+		api.GET("/forms/:id", h.GetForm)
+		api.PUT("/forms/:id", h.UpdateForm)
+		api.DELETE("/forms/:id", h.DeleteForm)
+
+		api.POST("/forms/:id/submissions", h.CreateSubmission)
+		api.GET("/forms/:id/submissions", h.ListSubmissions)
+		api.GET("/forms/:id/submissions/count", h.CountSubmissions)
+	}
 
 	slog.Info("Server starting", "port", cfg.Port)
 	if err := router.Run(":" + cfg.Port); err != nil {
