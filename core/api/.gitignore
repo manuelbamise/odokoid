@@ -1,0 +1,25 @@
+# Binaries
+odokoid-api
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# Output of the go coverage
+*.out
+
+# Dependency directories
+vendor/
+
+# .env files
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
