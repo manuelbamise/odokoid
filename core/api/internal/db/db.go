@@ -33,5 +33,5 @@ func Connect(databaseURL string) (*sql.DB, error) {
 }
 
 func redactPassword(url string) string {
-	return "postgres://****:****@localhost:5432/formapp?sslmode=disable"
+	return "postgres://****:****@localhost:5432/odokoiddb?sslmode=disable"
 }
