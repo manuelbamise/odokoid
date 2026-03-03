@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/pressly/goose/v3"
 	"odokoid-api/internal/config"
 	"odokoid-api/internal/db"
 )
@@ -28,6 +29,18 @@ func main() {
 		os.Exit(1)
 	}
 	defer database.Close()
+
+	if err := goose.SetDialect("postgres"); err != nil {
+		slog.Error("Failed to set goose dialect", "error", err.Error())
+		os.Exit(1)
+	}
+
+	if err := goose.Up(database, "./migrations"); err != nil {
+		slog.Error("Failed to run migrations", "error", err.Error())
+		os.Exit(1)
+	}
+
+	slog.Info("Migrations completed successfully")
 
 	router := gin.Default()
 
