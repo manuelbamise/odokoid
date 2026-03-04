@@ -1,27 +1,33 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useState, useMemo, useCallback } from 'react'
+import { useQuery, useMutation } from '@tanstack/react-query'
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Label } from '@/components/ui/label'
-import { useFormStore } from '@/lib/forms-store'
+import { Skeleton } from '@/components/ui/skeleton'
+import { api } from '@/lib/api'
+import { queryKeys } from '@/lib/queryKeys'
 import { FieldInput } from './FieldInput'
 import { ThankYouScreen } from './ThankYouScreen'
 import { getVisibleFields, validateField } from './utils'
 
 export function FormRenderer({ formId }: { formId: string }) {
-  const { getForm } = useFormStore()
+  const { data: form, isLoading, error } = useQuery({
+    queryKey: queryKeys.forms.detail(formId),
+    queryFn: () => api.getForm(formId),
+  })
 
-  const form = getForm(formId)
+  const submitForm = useMutation({
+    mutationFn: (responses: Record<string, unknown>) => api.submitForm(formId, responses),
+    onSuccess: () => {
+      setIsSubmitted(true)
+    },
+  })
 
   const [currentIndex, setCurrentIndex] = useState(0)
   const [responses, setResponses] = useState<Record<string, unknown>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitted, setIsSubmitted] = useState(false)
-  const [isLoaded, setIsLoaded] = useState(false)
-
-  useEffect(() => {
-    setIsLoaded(true)
-  }, [])
 
   const visibleFields = useMemo(
     () => getVisibleFields(form?.fields || [], responses),
@@ -63,17 +69,11 @@ export function FormRenderer({ formId }: { formId: string }) {
     if (!validateCurrentField()) return
 
     if (isLastField) {
-      const submission = {
-        formId,
-        responses,
-        submittedAt: new Date().toISOString(),
-      }
-      console.log('Form submitted:', submission)
-      setIsSubmitted(true)
+      submitForm.mutate(responses)
     } else {
       setCurrentIndex((prev) => prev + 1)
     }
-  }, [validateCurrentField, isLastField, formId, responses])
+  }, [validateCurrentField, isLastField, submitForm, responses])
 
   const handleBack = useCallback(() => {
     if (currentIndex > 0) {
@@ -88,7 +88,20 @@ export function FormRenderer({ formId }: { formId: string }) {
     setIsSubmitted(false)
   }, [])
 
-  if (!form) {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6">
+        <div className="w-full max-w-md">
+          <Skeleton className="h-4 w-32 mb-4" />
+          <Skeleton className="h-8 w-64 mb-8" />
+          <Skeleton className="h-12 w-full mb-4" />
+          <Skeleton className="h-10 w-24 ml-auto" />
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -103,7 +116,7 @@ export function FormRenderer({ formId }: { formId: string }) {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6">
-      <div className={`w-full max-w-md transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
+      <div className="w-full max-w-md">
         {!isSubmitted && visibleFields.length > 0 && (
           <div className="mb-8">
             <Progress value={progress} className="h-2" />
@@ -126,7 +139,7 @@ export function FormRenderer({ formId }: { formId: string }) {
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
             <div className="mb-2">
               <h1 className="text-sm font-medium text-muted-foreground">
-                {form.title}
+                {form?.title}
               </h1>
             </div>
 
@@ -161,9 +174,17 @@ export function FormRenderer({ formId }: { formId: string }) {
                 Back
               </Button>
 
-              <Button onClick={handleNext}>
-                {isLastField ? 'Submit' : 'Next'}
-                {!isLastField && <ChevronRight className="h-4 w-4 ml-2" />}
+              <Button onClick={handleNext} disabled={submitForm.isPending}>
+                {submitForm.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : isLastField ? (
+                  'Submit'
+                ) : (
+                  <>
+                    Next
+                    <ChevronRight className="h-4 w-4 ml-2" />
+                  </>
+                )}
               </Button>
             </div>
           </div>

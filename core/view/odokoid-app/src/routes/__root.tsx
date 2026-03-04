@@ -4,8 +4,10 @@ import { TanStackDevtools } from '@tanstack/react-devtools'
 import { LayoutDashboard, FileText, Settings, Menu } from 'lucide-react'
 import { Link, useMatchRoute } from '@tanstack/react-router'
 import { useState, useMemo } from 'react'
+import { Toaster } from '@/components/ui/sonner'
+import { queryClient } from '@/lib/queryClient'
+import { QueryClientProvider } from '@tanstack/react-query'
 
-import { FormStoreProvider } from '@/lib/forms-store'
 import appCss from '../styles.css?url'
 
 const THEME_INIT_SCRIPT = `(function(){try{var stored=window.localStorage.getItem('theme');var mode=(stored==='light'||stored==='dark'||stored==='auto')?stored:'auto';var prefersDark=window.matchMedia('(prefers-color-scheme: dark)').matches;var resolved=mode==='auto'?(prefersDark?'dark':'light'):mode;var root=document.documentElement;root.classList.remove('light','dark');root.classList.add(resolved);if(mode==='auto'){root.removeAttribute('data-theme')}else{root.setAttribute('data-theme',mode)}root.style.colorScheme=resolved;}catch(e){}})();`
@@ -53,7 +55,7 @@ function RootLayout() {
         <HeadContent />
       </head>
       <body className="font-sans antialiased [overflow-wrap:anywhere] selection:bg-[rgba(79,184,178,0.24)]">
-        <FormStoreProvider>
+        <QueryClientProvider client={queryClient}>
           <div className="flex h-screen">
             {!isBuilderRoute && !isPublicFormRoute && (
               <aside
@@ -102,7 +104,8 @@ function RootLayout() {
               <Outlet />
             </main>
           </div>
-        </FormStoreProvider>
+          <Toaster />
+        </QueryClientProvider>
 
         <TanStackDevtools
           config={{

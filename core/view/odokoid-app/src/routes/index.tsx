@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, FileText, MoreVertical, Copy, Trash2, Calendar } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -19,7 +20,9 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useFormStore } from '@/lib/forms-store'
+import { Skeleton } from '@/components/ui/skeleton'
+import { api } from '@/lib/api'
+import { queryKeys } from '@/lib/queryKeys'
 import type { Form } from '@/types/form'
 
 export const Route = createFileRoute('/')({
@@ -53,6 +56,25 @@ function EmptyState({ onCreateForm }: { onCreateForm: () => void }) {
   )
 }
 
+function FormCardSkeleton() {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+        <Skeleton className="h-6 w-3/4" />
+        <Skeleton className="h-8 w-8 rounded" />
+      </CardHeader>
+      <CardContent>
+        <Skeleton className="h-4 w-1/2 mb-4" />
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-4 w-20" />
+        </div>
+        <Skeleton className="h-4 w-32 mt-3" />
+      </CardContent>
+    </Card>
+  )
+}
+
 function FormCard({
   form,
   onEdit,
@@ -64,6 +86,11 @@ function FormCard({
   onCopyLink: (id: string) => void
   onDelete: (id: string) => void
 }) {
+  const { data: countData } = useQuery({
+    queryKey: queryKeys.forms.submissionCount(form.id),
+    queryFn: () => api.countSubmissions(form.id),
+  })
+
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
@@ -107,7 +134,7 @@ function FormCard({
             <span>{form.fields.length} fields</span>
           </div>
           <div className="flex items-center gap-1">
-            <span>0 submissions</span>
+            <span>{countData?.count ?? 0} submissions</span>
           </div>
         </div>
         <div className="flex items-center gap-1 mt-3 text-sm text-muted-foreground">
@@ -121,28 +148,43 @@ function FormCard({
 
 function Dashboard() {
   const navigate = useNavigate()
-  const { forms, addForm, deleteForm } = useFormStore()
+  const queryClient = useQueryClient()
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [newFormTitle, setNewFormTitle] = useState('')
   const [newFormDescription, setNewFormDescription] = useState('')
 
+  const { data: forms = [], isLoading } = useQuery({
+    queryKey: queryKeys.forms.all,
+    queryFn: api.listForms,
+  })
+
+  const createForm = useMutation({
+    mutationFn: (data: { title: string; description?: string; fields: unknown[] }) =>
+      api.createForm(data),
+    onSuccess: (form) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.forms.all })
+      setIsCreateDialogOpen(false)
+      setNewFormTitle('')
+      setNewFormDescription('')
+      navigate({ to: '/forms/$formId/edit', params: { formId: form.id } })
+    },
+  })
+
+  const deleteForm = useMutation({
+    mutationFn: api.deleteForm,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.forms.all })
+    },
+  })
+
   const handleCreateForm = () => {
     if (!newFormTitle.trim()) return
 
-    const newForm: Form = {
-      id: crypto.randomUUID(),
+    createForm.mutate({
       title: newFormTitle.trim(),
       description: newFormDescription.trim() || undefined,
       fields: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-
-    addForm(newForm)
-    setIsCreateDialogOpen(false)
-    setNewFormTitle('')
-    setNewFormDescription('')
-    navigate({ to: '/forms/$formId/edit', params: { formId: newForm.id } })
+    })
   }
 
   const handleEdit = (id: string) => {
@@ -155,7 +197,7 @@ function Dashboard() {
   }
 
   const handleDelete = (id: string) => {
-    deleteForm(id)
+    deleteForm.mutate(id)
   }
 
   return (
@@ -171,7 +213,13 @@ function Dashboard() {
         </Button>
       </div>
 
-      {forms.length === 0 ? (
+      {isLoading ? (
+        <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          <FormCardSkeleton />
+          <FormCardSkeleton />
+          <FormCardSkeleton />
+        </div>
+      ) : forms.length === 0 ? (
         <EmptyState onCreateForm={() => setIsCreateDialogOpen(true)} />
       ) : (
         <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
@@ -221,8 +269,11 @@ function Dashboard() {
             <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleCreateForm} disabled={!newFormTitle.trim()}>
-              Create Form
+            <Button
+              onClick={handleCreateForm}
+              disabled={!newFormTitle.trim() || createForm.isPending}
+            >
+              {createForm.isPending ? 'Creating...' : 'Create Form'}
             </Button>
           </DialogFooter>
         </DialogContent>
