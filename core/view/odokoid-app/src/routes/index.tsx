@@ -1,9 +1,16 @@
-import { useState } from 'react'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, FileText, MoreVertical, Copy, Trash2, Calendar } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { useState } from 'react';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  Plus,
+  FileText,
+  MoreVertical,
+  Copy,
+  Trash2,
+  Calendar,
+} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -11,31 +18,31 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
+} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Skeleton } from '@/components/ui/skeleton'
-import { api } from '@/lib/api'
-import { queryKeys } from '@/lib/queryKeys'
-import type { Form } from '@/types/form'
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
+import { api } from '@/lib/api';
+import { queryKeys } from '@/lib/queryKeys';
+import type { Form } from '@/types/form';
 
 export const Route = createFileRoute('/')({
   component: Dashboard,
-})
+});
 
 function formatDate(dateString: string): string {
-  const date = new Date(dateString)
+  const date = new Date(dateString);
   return date.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
-  })
+  });
 }
 
 function EmptyState({ onCreateForm }: { onCreateForm: () => void }) {
@@ -53,7 +60,7 @@ function EmptyState({ onCreateForm }: { onCreateForm: () => void }) {
         Create Form
       </Button>
     </div>
-  )
+  );
 }
 
 function FormCardSkeleton() {
@@ -72,7 +79,7 @@ function FormCardSkeleton() {
         <Skeleton className="h-4 w-32 mt-3" />
       </CardContent>
     </Card>
-  )
+  );
 }
 
 function FormCard({
@@ -81,15 +88,15 @@ function FormCard({
   onCopyLink,
   onDelete,
 }: {
-  form: Form
-  onEdit: (id: string) => void
-  onCopyLink: (id: string) => void
-  onDelete: (id: string) => void
+  form: Form;
+  onEdit: (id: string) => void;
+  onCopyLink: (id: string) => void;
+  onDelete: (id: string) => void;
 }) {
   const { data: countData } = useQuery({
     queryKey: queryKeys.forms.submissionCount(form.id),
     queryFn: () => api.countSubmissions(form.id),
-  })
+  });
 
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -143,62 +150,67 @@ function FormCard({
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 function Dashboard() {
-  const navigate = useNavigate()
-  const queryClient = useQueryClient()
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-  const [newFormTitle, setNewFormTitle] = useState('')
-  const [newFormDescription, setNewFormDescription] = useState('')
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [newFormTitle, setNewFormTitle] = useState('');
+  const [newFormDescription, setNewFormDescription] = useState('');
 
-  const { data: forms = [], isLoading } = useQuery({
+  const { data: forms, isLoading } = useQuery({
     queryKey: queryKeys.forms.all,
     queryFn: api.listForms,
-  })
+  });
+
+  const formsList = forms ?? []
 
   const createForm = useMutation({
-    mutationFn: (data: { title: string; description?: string; fields: unknown[] }) =>
-      api.createForm(data),
+    mutationFn: (data: {
+      title: string;
+      description?: string;
+      fields: unknown[];
+    }) => api.createForm(data),
     onSuccess: (form) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.forms.all })
-      setIsCreateDialogOpen(false)
-      setNewFormTitle('')
-      setNewFormDescription('')
-      navigate({ to: '/forms/$formId/edit', params: { formId: form.id } })
+      queryClient.invalidateQueries({ queryKey: queryKeys.forms.all });
+      setIsCreateDialogOpen(false);
+      setNewFormTitle('');
+      setNewFormDescription('');
+      navigate({ to: '/forms/$formId/edit', params: { formId: form.id } });
     },
-  })
+  });
 
   const deleteForm = useMutation({
     mutationFn: api.deleteForm,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.forms.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.forms.all });
     },
-  })
+  });
 
   const handleCreateForm = () => {
-    if (!newFormTitle.trim()) return
+    if (!newFormTitle.trim()) return;
 
     createForm.mutate({
       title: newFormTitle.trim(),
       description: newFormDescription.trim() || undefined,
       fields: [],
-    })
-  }
+    });
+  };
 
   const handleEdit = (id: string) => {
-    navigate({ to: '/forms/$formId/edit', params: { formId: id } })
-  }
+    navigate({ to: '/forms/$formId/edit', params: { formId: id } });
+  };
 
   const handleCopyLink = async (id: string) => {
-    const link = `${window.location.origin}/f/${id}`
-    await navigator.clipboard.writeText(link)
-  }
+    const link = `${window.location.origin}/f/${id}`;
+    await navigator.clipboard.writeText(link);
+  };
 
   const handleDelete = (id: string) => {
-    deleteForm.mutate(id)
-  }
+    deleteForm.mutate(id);
+  };
 
   return (
     <div className="p-6">
@@ -219,11 +231,11 @@ function Dashboard() {
           <FormCardSkeleton />
           <FormCardSkeleton />
         </div>
-      ) : forms.length === 0 ? (
+      ) : !formsList || formsList.length === 0 ? (
         <EmptyState onCreateForm={() => setIsCreateDialogOpen(true)} />
       ) : (
         <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          {forms.map((form) => (
+          {formsList.map((form) => (
             <FormCard
               key={form.id}
               form={form}
@@ -266,7 +278,10 @@ function Dashboard() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsCreateDialogOpen(false)}
+            >
               Cancel
             </Button>
             <Button
@@ -279,5 +294,5 @@ function Dashboard() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }
