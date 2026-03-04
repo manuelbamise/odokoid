@@ -91,7 +91,7 @@ function FormCard({
   form: Form;
   onEdit: (id: string) => void;
   onCopyLink: (id: string) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: string, title: string) => void;
 }) {
   const { data: countData } = useQuery({
     queryKey: queryKeys.forms.submissionCount(form.id),
@@ -120,7 +120,7 @@ function FormCard({
               Copy Link
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={() => onDelete(form.id)}
+              onClick={() => onDelete(form.id, form.title)}
               className="text-destructive focus:text-destructive"
             >
               <Trash2 className="h-4 w-4 mr-2" />
@@ -159,6 +159,7 @@ function Dashboard() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newFormTitle, setNewFormTitle] = useState('');
   const [newFormDescription, setNewFormDescription] = useState('');
+  const [formToDelete, setFormToDelete] = useState<{ id: string; title: string } | null>(null);
 
   const { data: forms, isLoading } = useQuery({
     queryKey: queryKeys.forms.all,
@@ -208,8 +209,8 @@ function Dashboard() {
     await navigator.clipboard.writeText(link);
   };
 
-  const handleDelete = (id: string) => {
-    deleteForm.mutate(id);
+  const handleDelete = (id: string, title: string) => {
+    setFormToDelete({ id, title });
   };
 
   return (
@@ -289,6 +290,34 @@ function Dashboard() {
               disabled={!newFormTitle.trim() || createForm.isPending}
             >
               {createForm.isPending ? 'Creating...' : 'Create Form'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!formToDelete} onOpenChange={() => setFormToDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Form</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{formToDelete?.title}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFormToDelete(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (formToDelete) {
+                  deleteForm.mutate(formToDelete.id);
+                }
+                setFormToDelete(null);
+              }}
+              disabled={deleteForm.isPending}
+            >
+              {deleteForm.isPending ? 'Deleting...' : 'Delete'}
             </Button>
           </DialogFooter>
         </DialogContent>
