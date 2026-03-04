@@ -28,12 +28,17 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { api } from '@/lib/api';
+import { useApi } from '@/lib/useApi';
 import { queryKeys } from '@/lib/queryKeys';
 import type { Form } from '@/types/form';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
 export const Route = createFileRoute('/')({
-  component: Dashboard,
+  component: () => (
+    <ProtectedRoute>
+      <Dashboard />
+    </ProtectedRoute>
+  ),
 });
 
 function formatDate(dateString: string): string {
@@ -93,6 +98,7 @@ function FormCard({
   onCopyLink: (id: string) => void;
   onDelete: (id: string, title: string) => void;
 }) {
+  const api = useApi();
   const { data: countData } = useQuery({
     queryKey: queryKeys.forms.submissionCount(form.id),
     queryFn: () => api.countSubmissions(form.id),
@@ -156,6 +162,7 @@ function FormCard({
 function Dashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const api = useApi();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newFormTitle, setNewFormTitle] = useState('');
   const [newFormDescription, setNewFormDescription] = useState('');

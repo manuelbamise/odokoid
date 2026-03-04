@@ -16,7 +16,7 @@ import { ArrowLeft, Eye, Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
-import { api } from '@/lib/api'
+import { useApi } from '@/lib/useApi'
 import { queryKeys } from '@/lib/queryKeys'
 import type { Field, FieldType } from '@/types/form'
 import {
@@ -27,9 +27,14 @@ import {
   FormCanvas,
   FieldSettings,
 } from '@/components/builder'
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 
 export const Route = createFileRoute('/forms/$formId/edit')({
-  component: FormBuilderPage,
+  component: () => (
+    <ProtectedRoute>
+      <FormBuilderPage />
+    </ProtectedRoute>
+  ),
 })
 
 function createField(type: FieldType): Field {
@@ -47,6 +52,7 @@ function createField(type: FieldType): Field {
 function FormBuilderPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const api = useApi()
   const { formId } = Route.useParams()
   const isNew = formId === 'new'
 
