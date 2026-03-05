@@ -28,3 +28,10 @@ type Submission struct {
 	Responses   json.RawMessage `json:"responses"`
 	SubmittedAt time.Time       `json:"submitted_at"`
 }
+
+type User struct {
+	ID        string    `json:"id"`
+	Email     string    `json:"email"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}

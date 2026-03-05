@@ -2,22 +2,34 @@ import { useEffect } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useAuth0 } from '@auth0/auth0-react'
 import { Loader2 } from 'lucide-react'
+import { useApi } from '@/lib/useApi'
 
 export const Route = createFileRoute('/callback')({
   component: CallbackPage,
 })
 
 function CallbackPage() {
-  const { isAuthenticated, isLoading } = useAuth0()
+  const { user, isAuthenticated, isLoading } = useAuth0()
   const navigate = useNavigate()
+  const api = useApi()
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      navigate({ to: '/' })
+      const syncUser = async () => {
+        try {
+          if (user?.sub && user?.email) {
+            await api.syncUser({ id: user.sub, email: user.email })
+          }
+        } catch (error) {
+          console.error('Failed to sync user:', error)
+        }
+        navigate({ to: '/' })
+      }
+      syncUser()
     } else if (!isLoading && !isAuthenticated) {
       navigate({ to: '/login' })
     }
-  }, [isAuthenticated, isLoading, navigate])
+  }, [isAuthenticated, isLoading, navigate, user, api])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">

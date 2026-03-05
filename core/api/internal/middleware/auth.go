@@ -1,59 +1,73 @@
 package middleware
 
 import (
-	"context"
+	"encoding/json"
+	"log/slog"
 	"net/http"
-	"net/url"
-	"time"
+	"strings"
 
-	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
-	"github.com/auth0/go-jwt-middleware/v2/jwks"
-	"github.com/auth0/go-jwt-middleware/v2/validator"
 	"github.com/gin-gonic/gin"
 )
 
-type CustomClaims struct {
+type UserInfo struct {
 	Sub string `json:"sub"`
 }
 
-func (c CustomClaims) Validate(ctx context.Context) error {
-	return nil
-}
-
 func Auth(domain, audience string) gin.HandlerFunc {
-	issuerURL, _ := url.Parse("https://" + domain + "/")
-
-	provider := jwks.NewCachingProvider(issuerURL, 5*time.Minute)
-
-	jwtValidator, _ := validator.New(
-		provider.KeyFunc,
-		validator.RS256,
-		issuerURL.String(),
-		[]string{audience},
-		validator.WithCustomClaims(func() validator.CustomClaims {
-			return &CustomClaims{}
-		}),
-	)
-
-	middleware := jwtmiddleware.New(jwtValidator.ValidateToken)
-
 	return func(c *gin.Context) {
-		encounteredError := true
-		var token *validator.ValidatedClaims
-
-		middleware.CheckJWT(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			encounteredError = false
-			token = r.Context().Value(jwtmiddleware.ContextKey{}).(*validator.ValidatedClaims)
-			c.Request = r
-		})).ServeHTTP(c.Writer, c.Request)
-
-		if encounteredError {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			slog.Error("No Authorization header")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing authorization header"})
 			return
 		}
 
-		claims := token.CustomClaims.(*CustomClaims)
-		c.Set("userID", claims.Sub)
+		parts := strings.SplitN(authHeader, " ", 2)
+		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+			slog.Error("Invalid Authorization header format")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization header"})
+			return
+		}
+
+		token := parts[1]
+
+		userInfo, err := validateTokenWithAuth0(domain, token)
+		if err != nil {
+			slog.Error("Token validation failed", "error", err.Error())
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+			return
+		}
+
+		c.Set("userID", userInfo.Sub)
 		c.Next()
 	}
+}
+
+func validateTokenWithAuth0(domain, token string) (*UserInfo, error) {
+	userInfoURL := "https://" + domain + "/userinfo"
+
+	req, err := http.NewRequest("GET", userInfoURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, err
+	}
+
+	var userInfo UserInfo
+	if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
+		return nil, err
+	}
+
+	return &userInfo, nil
 }

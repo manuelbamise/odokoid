@@ -69,6 +69,7 @@ func main() {
 
 	api.POST("/forms/:id/submissions", h.CreateSubmission)
 	api.GET("/forms/:id", h.GetFormPublic)
+	api.POST("/users/sync", h.SyncUser)
 
 	api.Use(middleware.Auth(cfg.Auth0Domain, cfg.Auth0Audience))
 	{

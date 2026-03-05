@@ -18,9 +18,11 @@ type Querier interface {
 	GetForm(ctx context.Context, arg GetFormParams) (Form, error)
 	GetFormPublic(ctx context.Context, id uuid.UUID) (Form, error)
 	GetSubmission(ctx context.Context, id uuid.UUID) (Submission, error)
+	GetUser(ctx context.Context, id string) (User, error)
 	ListForms(ctx context.Context, userID string) ([]Form, error)
 	ListSubmissionsByForm(ctx context.Context, formID uuid.UUID) ([]Submission, error)
 	UpdateForm(ctx context.Context, arg UpdateFormParams) (Form, error)
+	UpsertUser(ctx context.Context, arg UpsertUserParams) (User, error)
 }
 
 var _ Querier = (*Queries)(nil)

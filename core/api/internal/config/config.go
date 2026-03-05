@@ -33,6 +33,10 @@ func Load() (*Config, error) {
 		return nil, errors.New("DATABASE_URL is required")
 	}
 
+	if cfg.Auth0Domain == "" || cfg.Auth0Audience == "" {
+		return nil, errors.New("AUTH0_DOMAIN and AUTH0_AUDIENCE are required")
+	}
+
 	return cfg, nil
 }
 
