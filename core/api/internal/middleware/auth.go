@@ -23,7 +23,7 @@ func Auth(domain, audience string) gin.HandlerFunc {
 		}
 
 		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+		if len(parts) != 2 || strings.ToLower(parts[0]) != "Bearer" {
 			slog.Error("Invalid Authorization header format")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization header"})
 			return
