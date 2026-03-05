@@ -5,12 +5,14 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
-	"github.com/pressly/goose/v3"
 	"odokoid-api/internal/config"
 	"odokoid-api/internal/db"
 	"odokoid-api/internal/handler"
+	"odokoid-api/internal/middleware"
+
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+	"github.com/pressly/goose/v3"
 )
 
 func main() {
@@ -59,15 +61,21 @@ func main() {
 
 	h := handler.New(database)
 
+	// router.GET("/health", func(c *gin.Context) {
+	// 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	// })
+
 	api := router.Group("/api")
+
+	api.POST("/forms/:id/submissions", h.CreateSubmission)
+	api.GET("/forms/:id", h.GetFormPublic)
+
+	api.Use(middleware.Auth(cfg.Auth0Domain, cfg.Auth0Audience))
 	{
 		api.POST("/forms", h.CreateForm)
 		api.GET("/forms", h.ListForms)
-		api.GET("/forms/:id", h.GetForm)
 		api.PUT("/forms/:id", h.UpdateForm)
 		api.DELETE("/forms/:id", h.DeleteForm)
-
-		api.POST("/forms/:id/submissions", h.CreateSubmission)
 		api.GET("/forms/:id/submissions", h.ListSubmissions)
 		api.GET("/forms/:id/submissions/count", h.CountSubmissions)
 	}

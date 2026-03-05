@@ -14,10 +14,11 @@ type Querier interface {
 	CountSubmissionsByForm(ctx context.Context, formID uuid.UUID) (int64, error)
 	CreateForm(ctx context.Context, arg CreateFormParams) (Form, error)
 	CreateSubmission(ctx context.Context, arg CreateSubmissionParams) (Submission, error)
-	DeleteForm(ctx context.Context, id uuid.UUID) error
-	GetForm(ctx context.Context, id uuid.UUID) (Form, error)
+	DeleteForm(ctx context.Context, arg DeleteFormParams) error
+	GetForm(ctx context.Context, arg GetFormParams) (Form, error)
+	GetFormPublic(ctx context.Context, id uuid.UUID) (Form, error)
 	GetSubmission(ctx context.Context, id uuid.UUID) (Submission, error)
-	ListForms(ctx context.Context) ([]Form, error)
+	ListForms(ctx context.Context, userID string) ([]Form, error)
 	ListSubmissionsByForm(ctx context.Context, formID uuid.UUID) ([]Submission, error)
 	UpdateForm(ctx context.Context, arg UpdateFormParams) (Form, error)
 }

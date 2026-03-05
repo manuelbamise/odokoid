@@ -19,6 +19,7 @@ type Form struct {
 	Fields      json.RawMessage `json:"fields"`
 	CreatedAt   time.Time       `json:"created_at"`
 	UpdatedAt   time.Time       `json:"updated_at"`
+	UserID      string          `json:"user_id"`
 }
 
 type Submission struct {

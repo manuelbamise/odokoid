@@ -14,19 +14,25 @@ import (
 )
 
 const createForm = `-- name: CreateForm :one
-INSERT INTO forms (title, description, fields)
-VALUES ($1, $2, $3)
-RETURNING id, title, description, fields, created_at, updated_at
+INSERT INTO forms (title, description, fields, user_id)
+VALUES ($1, $2, $3, $4)
+RETURNING id, title, description, fields, created_at, updated_at, user_id
 `
 
 type CreateFormParams struct {
 	Title       string          `json:"title"`
 	Description sql.NullString  `json:"description"`
 	Fields      json.RawMessage `json:"fields"`
+	UserID      string          `json:"user_id"`
 }
 
 func (q *Queries) CreateForm(ctx context.Context, arg CreateFormParams) (Form, error) {
-	row := q.db.QueryRowContext(ctx, createForm, arg.Title, arg.Description, arg.Fields)
+	row := q.db.QueryRowContext(ctx, createForm,
+		arg.Title,
+		arg.Description,
+		arg.Fields,
+		arg.UserID,
+	)
 	var i Form
 	err := row.Scan(
 		&i.ID,
@@ -35,27 +41,38 @@ func (q *Queries) CreateForm(ctx context.Context, arg CreateFormParams) (Form, e
 		&i.Fields,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.UserID,
 	)
 	return i, err
 }
 
 const deleteForm = `-- name: DeleteForm :exec
 DELETE FROM forms
-WHERE id = $1
+WHERE id = $1 AND user_id = $2
 `
 
-func (q *Queries) DeleteForm(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.ExecContext(ctx, deleteForm, id)
+type DeleteFormParams struct {
+	ID     uuid.UUID `json:"id"`
+	UserID string    `json:"user_id"`
+}
+
+func (q *Queries) DeleteForm(ctx context.Context, arg DeleteFormParams) error {
+	_, err := q.db.ExecContext(ctx, deleteForm, arg.ID, arg.UserID)
 	return err
 }
 
 const getForm = `-- name: GetForm :one
-SELECT id, title, description, fields, created_at, updated_at FROM forms
-WHERE id = $1
+SELECT id, title, description, fields, created_at, updated_at, user_id FROM forms
+WHERE id = $1 AND user_id = $2
 `
 
-func (q *Queries) GetForm(ctx context.Context, id uuid.UUID) (Form, error) {
-	row := q.db.QueryRowContext(ctx, getForm, id)
+type GetFormParams struct {
+	ID     uuid.UUID `json:"id"`
+	UserID string    `json:"user_id"`
+}
+
+func (q *Queries) GetForm(ctx context.Context, arg GetFormParams) (Form, error) {
+	row := q.db.QueryRowContext(ctx, getForm, arg.ID, arg.UserID)
 	var i Form
 	err := row.Scan(
 		&i.ID,
@@ -64,17 +81,39 @@ func (q *Queries) GetForm(ctx context.Context, id uuid.UUID) (Form, error) {
 		&i.Fields,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.UserID,
+	)
+	return i, err
+}
+
+const getFormPublic = `-- name: GetFormPublic :one
+SELECT id, title, description, fields, created_at, updated_at, user_id FROM forms
+WHERE id = $1
+`
+
+func (q *Queries) GetFormPublic(ctx context.Context, id uuid.UUID) (Form, error) {
+	row := q.db.QueryRowContext(ctx, getFormPublic, id)
+	var i Form
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Description,
+		&i.Fields,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.UserID,
 	)
 	return i, err
 }
 
 const listForms = `-- name: ListForms :many
-SELECT id, title, description, fields, created_at, updated_at FROM forms
+SELECT id, title, description, fields, created_at, updated_at, user_id FROM forms
+WHERE user_id = $1
 ORDER BY created_at DESC
 `
 
-func (q *Queries) ListForms(ctx context.Context) ([]Form, error) {
-	rows, err := q.db.QueryContext(ctx, listForms)
+func (q *Queries) ListForms(ctx context.Context, userID string) ([]Form, error) {
+	rows, err := q.db.QueryContext(ctx, listForms, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -89,6 +128,7 @@ func (q *Queries) ListForms(ctx context.Context) ([]Form, error) {
 			&i.Fields,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.UserID,
 		); err != nil {
 			return nil, err
 		}
@@ -109,8 +149,8 @@ SET title = $1,
     description = $2,
     fields = $3,
     updated_at = NOW()
-WHERE id = $4
-RETURNING id, title, description, fields, created_at, updated_at
+WHERE id = $4 AND user_id = $5
+RETURNING id, title, description, fields, created_at, updated_at, user_id
 `
 
 type UpdateFormParams struct {
@@ -118,6 +158,7 @@ type UpdateFormParams struct {
 	Description sql.NullString  `json:"description"`
 	Fields      json.RawMessage `json:"fields"`
 	ID          uuid.UUID       `json:"id"`
+	UserID      string          `json:"user_id"`
 }
 
 func (q *Queries) UpdateForm(ctx context.Context, arg UpdateFormParams) (Form, error) {
@@ -126,6 +167,7 @@ func (q *Queries) UpdateForm(ctx context.Context, arg UpdateFormParams) (Form, e
 		arg.Description,
 		arg.Fields,
 		arg.ID,
+		arg.UserID,
 	)
 	var i Form
 	err := row.Scan(
@@ -135,6 +177,7 @@ func (q *Queries) UpdateForm(ctx context.Context, arg UpdateFormParams) (Form, e
 		&i.Fields,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.UserID,
 	)
 	return i, err
 }

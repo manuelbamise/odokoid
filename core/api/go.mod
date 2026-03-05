@@ -12,6 +12,7 @@ require (
 )
 
 require (
+	github.com/auth0/go-jwt-middleware/v2 v2.3.1 // indirect
 	github.com/bytedance/gopkg v0.1.3 // indirect
 	github.com/bytedance/sonic v1.15.0 // indirect
 	github.com/bytedance/sonic/loader v0.5.0 // indirect
@@ -48,4 +49,5 @@ require (
 	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/text v0.34.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
+	gopkg.in/go-jose/go-jose.v2 v2.6.3 // indirect
 )
