@@ -1,73 +1,111 @@
 package middleware
 
 import (
-	"encoding/json"
+	"context"
 	"log/slog"
 	"net/http"
-	"strings"
+	"net/url"
+	"time"
 
+	"github.com/auth0/go-jwt-middleware/v3"
+	"github.com/auth0/go-jwt-middleware/v3/jwks"
+	"github.com/auth0/go-jwt-middleware/v3/validator"
 	"github.com/gin-gonic/gin"
 )
 
-type UserInfo struct {
+type CustomClaims struct {
 	Sub string `json:"sub"`
 }
 
-func Auth(domain, audience string) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			slog.Error("No Authorization header")
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing authorization header"})
-			return
-		}
-
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || strings.ToLower(parts[0]) != "Bearer" {
-			slog.Error("Invalid Authorization header format")
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization header"})
-			return
-		}
-
-		token := parts[1]
-
-		userInfo, err := validateTokenWithAuth0(domain, token)
-		if err != nil {
-			slog.Error("Token validation failed", "error", err.Error())
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
-			return
-		}
-
-		c.Set("userID", userInfo.Sub)
-		c.Next()
-	}
+func (c *CustomClaims) Validate(ctx context.Context) error {
+	return nil
 }
 
-func validateTokenWithAuth0(domain, token string) (*UserInfo, error) {
-	userInfoURL := "https://" + domain + "/userinfo"
-
-	req, err := http.NewRequest("GET", userInfoURL, nil)
+func NewValidator(domain, audience string) (*validator.Validator, error) {
+	issuerURL, err := url.Parse("https://" + domain + "/")
 	if err != nil {
 		return nil, err
 	}
 
-	req.Header.Set("Authorization", "Bearer "+token)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	provider, err := jwks.NewCachingProvider(
+		jwks.WithIssuerURL(issuerURL),
+		jwks.WithCacheTTL(5*time.Minute),
+	)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
+	jwtValidator, err := validator.New(
+		validator.WithKeyFunc(provider.KeyFunc),
+		validator.WithAlgorithm(validator.RS256),
+		validator.WithIssuer(issuerURL.String()),
+		validator.WithAudiences([]string{audience}),
+		validator.WithCustomClaims(func() *CustomClaims {
+			return &CustomClaims{}
+		}),
+		validator.WithAllowedClockSkew(30*time.Second),
+	)
+	if err != nil {
 		return nil, err
 	}
 
-	var userInfo UserInfo
-	if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
-		return nil, err
+	return jwtValidator, nil
+}
+
+func Auth(domain, audience string) gin.HandlerFunc {
+	jwtValidator, err := NewValidator(domain, audience)
+	if err != nil {
+		slog.Error("Failed to create JWT validator", "error", err.Error())
 	}
 
-	return &userInfo, nil
+	errorHandler := func(w http.ResponseWriter, r *http.Request, err error) {
+		slog.Error("JWT validation error", "error", err.Error())
+	}
+
+	middleware, err := jwtmiddleware.New(
+		jwtmiddleware.WithValidator(jwtValidator),
+		jwtmiddleware.WithErrorHandler(errorHandler),
+	)
+	if err != nil {
+		slog.Error("Failed to create middleware", "error", err.Error())
+	}
+
+	return func(c *gin.Context) {
+		encounteredError := true
+
+		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			encounteredError = false
+			c.Request = r
+			c.Next()
+		})
+
+		middleware.CheckJWT(handler).ServeHTTP(c.Writer, c.Request)
+
+		if encounteredError {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			return
+		}
+
+		// Extract user ID from custom claims using validator context key
+		claimsVal := c.Request.Context().Value("jwtmiddleware ValidatedClaims")
+		if claimsVal == nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "no claims found"})
+			return
+		}
+
+		claims, ok := claimsVal.(*validator.ValidatedClaims)
+		if !ok {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid claims"})
+			return
+		}
+
+		userClaims, ok := claims.CustomClaims.(*CustomClaims)
+		if !ok {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid custom claims"})
+			return
+		}
+
+		c.Set("userID", userClaims.Sub)
+		c.Next()
+	}
 }
