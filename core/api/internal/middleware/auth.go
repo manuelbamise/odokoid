@@ -1,25 +1,16 @@
 package middleware
 
 import (
-	"context"
 	"log/slog"
 	"net/http"
 	"net/url"
 	"time"
 
-	jwtmiddleware "github.com/auth0/go-jwt-middleware/v3"
-	"github.com/auth0/go-jwt-middleware/v3/jwks"
-	"github.com/auth0/go-jwt-middleware/v3/validator"
+	"github.com/auth0/go-jwt-middleware/v2"
+	"github.com/auth0/go-jwt-middleware/v2/jwks"
+	"github.com/auth0/go-jwt-middleware/v2/validator"
 	"github.com/gin-gonic/gin"
 )
-
-type CustomClaims struct {
-	Sub string `json:"sub"`
-}
-
-func (c *CustomClaims) Validate(ctx context.Context) error {
-	return nil
-}
 
 func NewValidator(domain, audience string) (*validator.Validator, error) {
 	issuerURL, err := url.Parse("https://" + domain + "/")
@@ -27,23 +18,14 @@ func NewValidator(domain, audience string) (*validator.Validator, error) {
 		return nil, err
 	}
 
-	provider, err := jwks.NewCachingProvider(
-		jwks.WithIssuerURL(issuerURL),
-		jwks.WithCacheTTL(5*time.Minute),
-	)
-	if err != nil {
-		return nil, err
-	}
+	provider := jwks.NewCachingProvider(issuerURL, 5*time.Minute)
 
 	jwtValidator, err := validator.New(
-		validator.WithKeyFunc(provider.KeyFunc),
-		validator.WithAlgorithm(validator.RS256),
-		validator.WithIssuer(issuerURL.String()),
-		validator.WithAudiences([]string{audience}),
-		validator.WithCustomClaims(func() *CustomClaims {
-			return &CustomClaims{}
-		}),
-		validator.WithAllowedClockSkew(30*time.Second),
+		provider.KeyFunc,
+		validator.RS256,
+		issuerURL.String(),
+		[]string{audience},
+		validator.WithAllowedClockSkew(time.Minute),
 	)
 	if err != nil {
 		return nil, err
@@ -60,52 +42,23 @@ func Auth(domain, audience string) gin.HandlerFunc {
 
 	errorHandler := func(w http.ResponseWriter, r *http.Request, err error) {
 		slog.Error("JWT validation error", "error", err.Error())
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte(`{"error":"unauthorized"}`))
 	}
 
-	middleware, err := jwtmiddleware.New(
-		jwtmiddleware.WithValidator(jwtValidator),
+	middleware := jwtmiddleware.New(
+		jwtValidator.ValidateToken,
 		jwtmiddleware.WithErrorHandler(errorHandler),
 	)
-	if err != nil {
-		slog.Error("Failed to create middleware", "error", err.Error())
-	}
 
 	return func(c *gin.Context) {
-		encounteredError := true
-
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			encounteredError = false
-			c.Request = r
+			claims := r.Context().Value(jwtmiddleware.ContextKey{}).(*validator.ValidatedClaims)
+			c.Set("userID", claims.RegisteredClaims.Subject)
 			c.Next()
 		})
 
 		middleware.CheckJWT(handler).ServeHTTP(c.Writer, c.Request)
-
-		if encounteredError {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-			return
-		}
-
-		// Extract user ID from custom claims using validator context key
-		claimsVal := c.Request.Context().Value("jwtmiddleware ValidatedClaims")
-		if claimsVal == nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "no claims found"})
-			return
-		}
-
-		claims, ok := claimsVal.(*validator.ValidatedClaims)
-		if !ok {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid claims"})
-			return
-		}
-
-		userClaims, ok := claims.CustomClaims.(*CustomClaims)
-		if !ok {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid custom claims"})
-			return
-		}
-
-		c.Set("userID", userClaims.Sub)
-		c.Next()
 	}
 }
