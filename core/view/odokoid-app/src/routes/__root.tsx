@@ -7,7 +7,7 @@ import {
 } from '@tanstack/react-router';
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools';
 import { TanStackDevtools } from '@tanstack/react-devtools';
-import { LayoutDashboard, FileText, Menu, LogOut } from 'lucide-react';
+import { LayoutDashboard, Menu, LogOut } from 'lucide-react';
 import { Link, useMatchRoute } from '@tanstack/react-router';
 import { Auth0Provider, useAuth0 } from '@auth0/auth0-react';
 import { Toaster } from '@/components/ui/sonner';
@@ -190,14 +190,6 @@ function RootLayout() {
                       >
                         <LayoutDashboard className="h-5 w-5" />
                         {sidebarOpen && <span>Dashboard</span>}
-                      </Link>
-                      <Link
-                        to="/forms/$formId/edit"
-                        params={{ formId: 'new' }}
-                        className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent [&.active]:bg-accent"
-                      >
-                        <FileText className="h-5 w-5" />
-                        {sidebarOpen && <span>New Form</span>}
                       </Link>
                     </nav>
 

@@ -32,9 +32,10 @@ const fieldTypeLabels: Record<FieldType, string> = {
 
 interface FieldPaletteItemProps {
   type: FieldType
+  onAdd?: (type: FieldType) => void
 }
 
-export function FieldPaletteItem({ type }: FieldPaletteItemProps) {
+export function FieldPaletteItem({ type, onAdd }: FieldPaletteItemProps) {
   const Icon = fieldTypeIcons[type]
   
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -58,6 +59,7 @@ export function FieldPaletteItem({ type }: FieldPaletteItemProps) {
       className={`flex items-center gap-3 p-3 bg-card border rounded-lg cursor-grab hover:bg-accent hover:shadow-sm transition-all ${
         isDragging ? 'opacity-50' : ''
       }`}
+      onClick={() => onAdd?.(type)}
       {...listeners}
       {...attributes}
     >

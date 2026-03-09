@@ -7,7 +7,6 @@ export function useApi() {
   async function withToken<T>(fn: (token: string) => Promise<T>): Promise<T> {
     try {
       const token = await getAccessTokenSilently();
-      console.log(token);
       return fn(token);
     } catch {
       throw new Error('Failed to get access token');

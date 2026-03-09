@@ -145,6 +145,12 @@ function FormBuilderPage() {
     }
   }
 
+  const handleAddField = (type: FieldType) => {
+    const newField = createField(type)
+    setFields((prev) => [...prev, newField])
+    setSelectedFieldId(newField.id)
+  }
+
   const handleSave = () => {
     if (!form && !isNew) return
 
@@ -238,7 +244,7 @@ function FormBuilderPage() {
           <h2 className="text-sm font-semibold mb-4 text-muted-foreground">Field Types</h2>
           <div className="space-y-2">
             {fieldTypes.map((type) => (
-              <FieldPaletteItem key={type} type={type} />
+              <FieldPaletteItem key={type} type={type} onAdd={handleAddField} />
             ))}
           </div>
         </aside>
@@ -318,7 +324,7 @@ function FormBuilderPage() {
               <h2 className="text-sm font-semibold mb-4 text-muted-foreground">Field Types</h2>
               <div className="space-y-2">
                 {fieldTypes.map((type) => (
-                  <FieldPaletteItem key={type} type={type} />
+                  <FieldPaletteItem key={type} type={type} onAdd={handleAddField} />
                 ))}
               </div>
             </aside>
