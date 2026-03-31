@@ -31,14 +31,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useApi } from '@/lib/useApi';
 import { queryKeys } from '@/lib/queryKeys';
 import type { Form } from '@/types/form';
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
 export const Route = createFileRoute('/')({
-  component: () => (
-    <ProtectedRoute>
-      <Dashboard />
-    </ProtectedRoute>
-  ),
+  component: Dashboard,
 });
 
 function formatDate(dateString: string): string {

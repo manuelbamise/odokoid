@@ -31,7 +31,7 @@ func (h *Handler) CreateSubmission(c *gin.Context) {
 		return
 	}
 
-	_, err = h.queries.GetFormPublic(c.Request.Context(), formID)
+	_, err = h.queries.GetForm(c.Request.Context(), formID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			respondError(c, http.StatusNotFound, "form not found")
@@ -71,12 +71,6 @@ func (h *Handler) CreateSubmission(c *gin.Context) {
 }
 
 func (h *Handler) ListSubmissions(c *gin.Context) {
-	userID, ok := getUserID(c)
-	if !ok {
-		respondError(c, http.StatusUnauthorized, "unauthorized")
-		return
-	}
-
 	formIDStr := c.Param("id")
 	formID, err := uuid.Parse(formIDStr)
 	if err != nil {
@@ -84,10 +78,7 @@ func (h *Handler) ListSubmissions(c *gin.Context) {
 		return
 	}
 
-	_, err = h.queries.GetForm(c.Request.Context(), sqlcgen.GetFormParams{
-		ID:     formID,
-		UserID: userID,
-	})
+	_, err = h.queries.GetForm(c.Request.Context(), formID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			respondError(c, http.StatusNotFound, "form not found")
@@ -112,12 +103,6 @@ func (h *Handler) ListSubmissions(c *gin.Context) {
 }
 
 func (h *Handler) CountSubmissions(c *gin.Context) {
-	userID, ok := getUserID(c)
-	if !ok {
-		respondError(c, http.StatusUnauthorized, "unauthorized")
-		return
-	}
-
 	formIDStr := c.Param("id")
 	formID, err := uuid.Parse(formIDStr)
 	if err != nil {
@@ -125,10 +110,7 @@ func (h *Handler) CountSubmissions(c *gin.Context) {
 		return
 	}
 
-	_, err = h.queries.GetForm(c.Request.Context(), sqlcgen.GetFormParams{
-		ID:     formID,
-		UserID: userID,
-	})
+	_, err = h.queries.GetForm(c.Request.Context(), formID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			respondError(c, http.StatusNotFound, "form not found")

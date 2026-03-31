@@ -27,14 +27,9 @@ import {
   FormCanvas,
   FieldSettings,
 } from '@/components/builder'
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 
 export const Route = createFileRoute('/forms/$formId/edit')({
-  component: () => (
-    <ProtectedRoute>
-      <FormBuilderPage />
-    </ProtectedRoute>
-  ),
+  component: FormBuilderPage,
 })
 
 function createField(type: FieldType): Field {

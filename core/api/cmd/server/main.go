@@ -8,7 +8,6 @@ import (
 	"odokoid-api/internal/config"
 	"odokoid-api/internal/db"
 	"odokoid-api/internal/handler"
-	"odokoid-api/internal/middleware"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -50,7 +49,7 @@ func main() {
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:3000"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 	}))
@@ -62,12 +61,6 @@ func main() {
 	h := handler.New(database)
 
 	api := router.Group("/api")
-
-	api.POST("/forms/:id/submissions", h.CreateSubmission)
-	api.GET("/forms/:id", h.GetFormPublic)
-	api.POST("/users/sync", h.SyncUser)
-
-	api.Use(middleware.Auth(cfg.Auth0Domain, cfg.Auth0Audience))
 	{
 		api.POST("/forms", h.CreateForm)
 		api.GET("/forms", h.ListForms)
@@ -75,6 +68,8 @@ func main() {
 		api.DELETE("/forms/:id", h.DeleteForm)
 		api.GET("/forms/:id/submissions", h.ListSubmissions)
 		api.GET("/forms/:id/submissions/count", h.CountSubmissions)
+		api.POST("/forms/:id/submissions", h.CreateSubmission)
+		api.GET("/forms/:id", h.GetFormPublic)
 	}
 
 	slog.Info("Server starting", "port", cfg.Port)

@@ -4,15 +4,11 @@ const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080';
 
 async function request<T>(
   path: string,
-  options?: RequestInit & { token?: string },
+  options?: RequestInit,
 ): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
-
-  if (options?.token) {
-    headers['Authorization'] = `Bearer ${options.token}`;
-  }
 
   const res = await fetch(`${BASE_URL}${path}`, {
     headers,
@@ -29,30 +25,26 @@ async function request<T>(
 }
 
 export const api = {
-  listForms: (token?: string) => request<Form[]>('/api/forms', { token }),
-  getForm: (id: string, token?: string) =>
-    request<Form>(`/api/forms/${id}`, { token }),
+  listForms: () => request<Form[]>('/api/forms'),
+  getForm: (id: string) =>
+    request<Form>(`/api/forms/${id}`),
   createForm: (
     body: { title: string; description?: string; fields: unknown[] },
-    token?: string,
   ) =>
     request<Form>('/api/forms', {
       method: 'POST',
       body: JSON.stringify(body),
-      token,
     }),
   updateForm: (
     id: string,
     body: { title: string; description?: string; fields: unknown[] },
-    token?: string,
   ) =>
     request<Form>(`/api/forms/${id}`, {
       method: 'PUT',
       body: JSON.stringify(body),
-      token,
     }),
-  deleteForm: (id: string, token?: string) =>
-    request<void>(`/api/forms/${id}`, { method: 'DELETE', token }),
+  deleteForm: (id: string) =>
+    request<void>(`/api/forms/${id}`, { method: 'DELETE' }),
 
   submitForm: (formId: string, responses: Record<string, unknown>) =>
     request<FormSubmission>(`/api/forms/${formId}/submissions`, {
@@ -63,14 +55,4 @@ export const api = {
     request<FormSubmission[]>(`/api/forms/${formId}/submissions`),
   countSubmissions: (formId: string) =>
     request<{ count: number }>(`/api/forms/${formId}/submissions/count`),
-
-  syncUser: (
-    body: { id: string; email: string },
-    token?: string,
-  ) =>
-    request<{ id: string; email: string }>('/api/users/sync', {
-      method: 'POST',
-      body: JSON.stringify(body),
-      token,
-    }),
 };

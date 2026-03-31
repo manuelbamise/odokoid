@@ -9,11 +9,9 @@ import (
 )
 
 type Config struct {
-	DatabaseURL   string
-	Port          string
-	Env           string
-	Auth0Domain   string
-	Auth0Audience string
+	DatabaseURL string
+	Port        string
+	Env         string
 }
 
 func Load() (*Config, error) {
@@ -22,19 +20,13 @@ func Load() (*Config, error) {
 	}
 
 	cfg := &Config{
-		DatabaseURL:   os.Getenv("DATABASE_URL"),
-		Port:          getEnv("PORT", "8080"),
-		Env:           getEnv("ENV", "development"),
-		Auth0Domain:   os.Getenv("AUTH0_DOMAIN"),
-		Auth0Audience: os.Getenv("AUTH0_AUDIENCE"),
+		DatabaseURL: os.Getenv("DATABASE_URL"),
+		Port:        getEnv("PORT", "8080"),
+		Env:         getEnv("ENV", "development"),
 	}
 
 	if cfg.DatabaseURL == "" {
 		return nil, errors.New("DATABASE_URL is required")
-	}
-
-	if cfg.Auth0Domain == "" || cfg.Auth0Audience == "" {
-		return nil, errors.New("AUTH0_DOMAIN and AUTH0_AUDIENCE are required")
 	}
 
 	return cfg, nil

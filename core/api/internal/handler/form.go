@@ -36,12 +36,6 @@ type FormResponse struct {
 }
 
 func (h *Handler) CreateForm(c *gin.Context) {
-	userID, ok := getUserID(c)
-	if !ok {
-		respondError(c, http.StatusUnauthorized, "unauthorized")
-		return
-	}
-
 	var input CreateFormInput
 	if err := c.ShouldBindJSON(&input); err != nil {
 		respondError(c, http.StatusBadRequest, "title is required")
@@ -73,7 +67,6 @@ func (h *Handler) CreateForm(c *gin.Context) {
 		Title:       input.Title,
 		Description: description,
 		Fields:      fieldsJSON,
-		UserID:      userID,
 	})
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "failed to create form")
@@ -84,13 +77,7 @@ func (h *Handler) CreateForm(c *gin.Context) {
 }
 
 func (h *Handler) ListForms(c *gin.Context) {
-	userID, ok := getUserID(c)
-	if !ok {
-		respondError(c, http.StatusUnauthorized, "unauthorized")
-		return
-	}
-
-	forms, err := h.queries.ListForms(c.Request.Context(), userID)
+	forms, err := h.queries.ListForms(c.Request.Context())
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "failed to list forms")
 		return
@@ -105,12 +92,6 @@ func (h *Handler) ListForms(c *gin.Context) {
 }
 
 func (h *Handler) GetForm(c *gin.Context) {
-	userID, ok := getUserID(c)
-	if !ok {
-		respondError(c, http.StatusUnauthorized, "unauthorized")
-		return
-	}
-
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -118,10 +99,7 @@ func (h *Handler) GetForm(c *gin.Context) {
 		return
 	}
 
-	form, err := h.queries.GetForm(c.Request.Context(), sqlcgen.GetFormParams{
-		ID:     id,
-		UserID: userID,
-	})
+	form, err := h.queries.GetForm(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			respondError(c, http.StatusNotFound, "form not found")
@@ -135,12 +113,6 @@ func (h *Handler) GetForm(c *gin.Context) {
 }
 
 func (h *Handler) UpdateForm(c *gin.Context) {
-	userID, ok := getUserID(c)
-	if !ok {
-		respondError(c, http.StatusUnauthorized, "unauthorized")
-		return
-	}
-
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -165,10 +137,7 @@ func (h *Handler) UpdateForm(c *gin.Context) {
 		}
 	}
 
-	existingForm, err := h.queries.GetForm(c.Request.Context(), sqlcgen.GetFormParams{
-		ID:     id,
-		UserID: userID,
-	})
+	existingForm, err := h.queries.GetForm(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			respondError(c, http.StatusNotFound, "form not found")
@@ -208,7 +177,6 @@ func (h *Handler) UpdateForm(c *gin.Context) {
 		Description: description,
 		Fields:      fieldsJSON,
 		ID:          id,
-		UserID:      userID,
 	})
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "failed to update form")
@@ -219,12 +187,6 @@ func (h *Handler) UpdateForm(c *gin.Context) {
 }
 
 func (h *Handler) DeleteForm(c *gin.Context) {
-	userID, ok := getUserID(c)
-	if !ok {
-		respondError(c, http.StatusUnauthorized, "unauthorized")
-		return
-	}
-
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -232,10 +194,7 @@ func (h *Handler) DeleteForm(c *gin.Context) {
 		return
 	}
 
-	err = h.queries.DeleteForm(c.Request.Context(), sqlcgen.DeleteFormParams{
-		ID:     id,
-		UserID: userID,
-	})
+	err = h.queries.DeleteForm(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			respondError(c, http.StatusNotFound, "form not found")
@@ -256,7 +215,7 @@ func (h *Handler) GetFormPublic(c *gin.Context) {
 		return
 	}
 
-	form, err := h.queries.GetFormPublic(c.Request.Context(), id)
+	form, err := h.queries.GetForm(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			respondError(c, http.StatusNotFound, "form not found")
